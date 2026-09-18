@@ -27,7 +27,7 @@ export default async function AdminLayout({
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar userRole={role} />
-      <main className="flex-1 overflow-y-auto bg-muted/20 p-8">
+      <main className="flex-1 overflow-y-auto bg-muted/20 p-8 print:bg-white print:p-0 print:overflow-visible">
         {children}
       </main>
     </div>

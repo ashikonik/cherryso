@@ -29,7 +29,7 @@ export function Sidebar({ userRole }: { userRole: string }) {
   const pathname = usePathname()
 
   return (
-    <div className="w-64 border-r border-border bg-card flex flex-col h-screen sticky top-0">
+    <div className="w-64 border-r border-border bg-card flex flex-col h-screen sticky top-0 print:hidden">
       <div className="p-6">
         <Link href="/" className="text-xl font-bold text-primary flex items-center gap-2">
           🍒 CherrySo Admin

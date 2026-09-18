@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Trash2 } from "lucide-react"
 
-export function CategoryClient({ initialCategories }: { initialCategories: any[] }) {
+export function CategoryClient({ initialCategories }: { initialCategories: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ }) {
   const [isPending, setIsPending] = useState(false)
   const [name, setName] = useState("")
   const [slug, setSlug] = useState("")

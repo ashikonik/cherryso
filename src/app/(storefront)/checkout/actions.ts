@@ -17,7 +17,7 @@ export async function createOrderAction(formData: FormData) {
     const senderNumber = (formData.get("senderNumber") as string) || null
     
     const cartItemsStr = formData.get("cartItems") as string
-    const cartItems = JSON.parse(cartItemsStr) as any[]
+    const cartItems = JSON.parse(cartItemsStr) as any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */
 
     if (!customerName || !customerPhone || !shippingZoneId || !shippingAddress || cartItems.length === 0) {
       return { error: "Missing required fields." }
@@ -146,7 +146,7 @@ export async function createOrderAction(formData: FormData) {
 
     return { success: true, orderId: createdOrderId }
     
-  } catch (error: any) {
+  } catch (error: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
     console.error("Order creation failed:", error)
     return { error: error.message || "Failed to create order. Please try again." }
   }

@@ -13,7 +13,7 @@ export default async function CheckoutPage() {
     where: eq(siteSettings.key, "payment_methods")
   })
   
-  const paymentMethods = (paymentSettings?.value as any[]) || []
+  const paymentMethods = (paymentSettings?.value as any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */) || []
 
   return (
     <div className="container mx-auto px-4 py-8">

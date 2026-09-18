@@ -1,25 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { quickUpdateOrderStatus } from "./actions"
+import { quickUpdatePaymentStatus } from "./actions"
 import { Loader2 } from "lucide-react"
 
-export function QuickOrderConfirm({ orderId, currentStatus }: { orderId: string, currentStatus: string }) {
+export function QuickPaymentEdit({ orderId, currentStatus }: { orderId: string, currentStatus: string }) {
   const [loading, setLoading] = useState(false)
   const [optimisticStatus, setOptimisticStatus] = useState(currentStatus)
 
-  // Determine colors based on status
+  // Determine colors based on payment status
   const getColorClasses = (status: string) => {
     switch(status) {
       case 'pending': 
         return 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-900'
-      case 'processing': 
-        return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900'
-      case 'shipped': 
-        return 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900'
-      case 'delivered': 
+      case 'paid': 
         return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900'
-      case 'cancelled': 
+      case 'failed': 
       case 'refunded':
         return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900'
       default:
@@ -37,15 +33,13 @@ export function QuickOrderConfirm({ orderId, currentStatus }: { orderId: string,
           const newStatus = e.target.value as any /* eslint-disable-line @typescript-eslint/no-explicit-any */
           setOptimisticStatus(newStatus)
           setLoading(true)
-          await quickUpdateOrderStatus(orderId, newStatus)
+          await quickUpdatePaymentStatus(orderId, newStatus)
           setLoading(false)
         }}
       >
         <option value="pending" className="bg-background text-foreground uppercase">Pending</option>
-        <option value="processing" className="bg-background text-foreground uppercase">Processing</option>
-        <option value="shipped" className="bg-background text-foreground uppercase">Shipped</option>
-        <option value="delivered" className="bg-background text-foreground uppercase">Delivered</option>
-        <option value="cancelled" className="bg-background text-foreground uppercase">Cancelled</option>
+        <option value="paid" className="bg-background text-foreground uppercase">Paid</option>
+        <option value="failed" className="bg-background text-foreground uppercase">Failed</option>
         <option value="refunded" className="bg-background text-foreground uppercase">Refunded</option>
       </select>
       

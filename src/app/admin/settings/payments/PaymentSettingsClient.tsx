@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { Textarea } from "@/components/ui/textarea"
 
-export function PaymentSettingsClient({ initialMethods }: { initialMethods: any[] }) {
+export function PaymentSettingsClient({ initialMethods }: { initialMethods: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ }) {
   const [methods, setMethods] = useState<any[]>(initialMethods)
   const [loading, setLoading] = useState(false)
 

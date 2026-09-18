@@ -154,6 +154,8 @@ export const orders = pgTable("orders", {
   paymentMethod: text("payment_method").notNull(), // e.g. "cash_on_delivery", "bkash"
   paymentStatus: text("payment_status").$type<"pending" | "paid" | "failed" | "refunded">().default("pending").notNull(),
   transactionId: text("transaction_id"),
+  courierConsignmentId: text("courier_consignment_id"),
+  courierTrackingUrl: text("courier_tracking_url"),
   
   // Inventory Reservation (For manual bank transfers or waiting for webhook)
   reservedUntil: timestamp("reserved_until"),

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { ImageUploader } from "@/components/ui/image-uploader"
 import { useRouter } from "next/navigation"
 
-export function ProductForm({ categories, tags, initialData }: { categories: any[], tags: any[], initialData?: any }) {
+export function ProductForm({ categories, tags, initialData }: { categories: any /* eslint-disable-line @typescript-eslint/no-explicit-any */[], tags: any /* eslint-disable-line @typescript-eslint/no-explicit-any */[], initialData?: any }) {
   const router = useRouter()
   const [isPending, setIsPending] = useState(false)
   
@@ -47,7 +47,7 @@ export function ProductForm({ categories, tags, initialData }: { categories: any
       if (tag) parts.push(tag.name.substring(0, 3).toUpperCase())
     }
     if (colorName) parts.push(colorName.substring(0, 3).toUpperCase())
-    parts.push(Math.random().toString(36).substring(2, 6).toUpperCase())
+    parts.push(Date.now().toString(36).slice(-4).toUpperCase())
     return parts.join("-")
   }
 

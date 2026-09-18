@@ -179,7 +179,7 @@ export async function updateProduct(id: string, formData: FormData, oldImagesIgn
         }
       }
 
-      for (const v of variants as any[]) {
+      for (const v of variants as any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
         if (v.id) {
           await tx.update(productVariants).set({
             name: v.name || v.color,

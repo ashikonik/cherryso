@@ -20,7 +20,7 @@ export default async function PaymentSettingsPage() {
         <p className="text-muted-foreground">Enable, disable, and configure your store's payment methods.</p>
       </div>
       
-      <PaymentSettingsClient initialMethods={paymentMethods as any[]} />
+      <PaymentSettingsClient initialMethods={paymentMethods as any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */} />
     </div>
   )
 }

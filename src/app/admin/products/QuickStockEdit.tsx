@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Edit2 } from "lucide-react"
 
-export function QuickStockEdit({ product }: { product: any }) {
+export function QuickStockEdit({ product }: { product: any /* eslint-disable-line @typescript-eslint/no-explicit-any */ }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   

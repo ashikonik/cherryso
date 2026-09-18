@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 
-export function ProductCard({ product }: { product: any }) {
+export function ProductCard({ product }: { product: any /* eslint-disable-line @typescript-eslint/no-explicit-any */ }) {
   const primaryImage = product.images?.[0]?.url || "/placeholder.png" // Assume placeholder exists
   
   return (

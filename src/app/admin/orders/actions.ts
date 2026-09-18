@@ -30,3 +30,15 @@ export async function updateOrderShippingAction(orderId: string, newShippingCost
   revalidatePath("/admin/orders")
   return { success: true }
 }
+
+export async function quickUpdatePaymentStatus(orderId: string, newStatus: "pending" | "paid" | "failed" | "refunded") {
+  await requireAdmin()
+  
+  await db.update(orders)
+    .set({ paymentStatus: newStatus, updatedAt: new Date() })
+    .where(eq(orders.id, orderId))
+    
+  revalidatePath("/admin")
+  revalidatePath("/admin/orders")
+}
+

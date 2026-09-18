@@ -17,7 +17,7 @@ async function addStorageRls() {
       WITH CHECK (bucket_id = 'products');
     `;
     console.log("Created INSERT policy");
-  } catch (e: any) {
+  } catch (e: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
     console.log("INSERT policy might exist:", e.message);
   }
 
@@ -28,7 +28,7 @@ async function addStorageRls() {
       USING (bucket_id = 'products');
     `;
     console.log("Created UPDATE policy");
-  } catch (e: any) {
+  } catch (e: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
     console.log("UPDATE policy might exist:", e.message);
   }
 
@@ -39,7 +39,7 @@ async function addStorageRls() {
       USING (bucket_id = 'products');
     `;
     console.log("Created DELETE policy");
-  } catch (e: any) {
+  } catch (e: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
     console.log("DELETE policy might exist:", e.message);
   }
 

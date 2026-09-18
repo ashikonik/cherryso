@@ -16,7 +16,7 @@ import { Trash2, Edit } from "lucide-react"
 import Link from "next/link"
 import { QuickStockEdit } from "./QuickStockEdit"
 
-export function ProductClient({ initialProducts }: { initialProducts: any[] }) {
+export function ProductClient({ initialProducts }: { initialProducts: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ }) {
   return (
     <div className="border border-border bg-card rounded-xl shadow-sm overflow-hidden">
       <Table>

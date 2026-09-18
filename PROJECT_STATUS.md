@@ -61,7 +61,7 @@ A comprehensive review of the active codebase confirms high structural integrity
 
 We are currently at **Phase 7**. The immediate next steps to achieve MVP are:
 
-- [ ] **Phase 7.2:** Auto-Generate HTML Invoices/Receipts.
-- [ ] **Phase 7.3:** Detailed Order View Page for Admins.
-- [ ] **Phase 8:** Steadfast Courier Integration.
+- ✅ **Phase 7.2:** Auto-Generate HTML Invoices/Receipts.
+- ✅ **Phase 7.3:** Detailed Order View Page for Admins.
+- ✅ **Phase 8:** Steadfast Courier Integration.
 - [ ] 🚀 **MVP DEPLOYMENT.**

@@ -3,7 +3,9 @@ import { orders, shippingZones } from "@/db/schema"
 import { desc, eq } from "drizzle-orm"
 import { QuickOrderConfirm } from "../QuickOrderConfirm"
 import { QuickShippingEdit } from "./QuickShippingEdit"
+import { QuickPaymentEdit } from "./QuickPaymentEdit"
 import { requireAdmin } from "@/lib/auth-utils"
+import Link from "next/link"
 
 export default async function AdminOrdersPage() {
   await requireAdmin()
@@ -34,14 +36,22 @@ export default async function AdminOrdersPage() {
                 <th className="px-6 py-4 font-medium text-muted-foreground">Customer</th>
                 <th className="px-6 py-4 font-medium text-muted-foreground">Shipping Area</th>
                 <th className="px-6 py-4 font-medium text-muted-foreground">Total</th>
-                <th className="px-6 py-4 font-medium text-muted-foreground text-right">Status Actions</th>
+                <th className="px-6 py-4 font-medium text-muted-foreground text-center">Payment</th>
+                <th className="px-6 py-4 font-medium text-muted-foreground text-right">Order Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {allOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-muted/20 transition-colors">
                   <td className="px-6 py-4">
-                    <p className="font-semibold text-foreground">{order.orderNumber}</p>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/admin/orders/${order.id}`} className="font-semibold text-foreground hover:text-primary transition-colors hover:underline">
+                        {order.orderNumber}
+                      </Link>
+                      <a href={`/admin/orders/${order.id}/invoice`} target="_blank" className="text-muted-foreground hover:text-primary ml-1" title="Print Invoice">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                      </a>
+                    </div>
                     <p className="text-[10px] text-muted-foreground font-mono">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </td>
                   <td className="px-6 py-4">
@@ -66,6 +76,9 @@ export default async function AdminOrdersPage() {
                         {order.transactionId}
                       </p>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <QuickPaymentEdit orderId={order.id} currentStatus={order.paymentStatus} />
                   </td>
                   <td className="px-6 py-4 text-right">
                     <QuickOrderConfirm orderId={order.id} currentStatus={order.status} />
