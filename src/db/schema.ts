@@ -9,8 +9,9 @@ import {
   jsonb,
   primaryKey,
   foreignKey,
+  check,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // 1. Users (Extends Supabase auth.users)
 // Note: In Supabase, the auth.users table is in the auth schema.
@@ -68,6 +69,10 @@ export const products = pgTable("products", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   // Note: search_vector will be added via raw SQL migration as it uses TSVECTOR
+}, (table) => {
+  return {
+    stockCheck: check("products_stock_check", sql`${table.stock} >= 0`)
+  }
 });
 
 export const productTags = pgTable("product_tags", {
@@ -84,6 +89,7 @@ export const productImages = pgTable("product_images", {
   altText: text("alt_text"),
   position: integer("position").default(0).notNull(),
   isPrimary: boolean("is_primary").default(false).notNull(),
+  color: text("color"),
 });
 
 export const productVideos = pgTable("product_videos", {
@@ -91,6 +97,7 @@ export const productVideos = pgTable("product_videos", {
   productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
   url: text("url").notNull(),
   thumbnailUrl: text("thumbnail_url"),
+  color: text("color"),
 });
 
 export const productVariants = pgTable("product_variants", {
@@ -101,6 +108,11 @@ export const productVariants = pgTable("product_variants", {
   priceOverride: decimal("price_override", { precision: 10, scale: 2 }),
   stock: integer("stock").default(0).notNull(),
   weightGrams: integer("weight_grams"), // Overrides base weight if present
+  color: text("color"),
+}, (table) => {
+  return {
+    stockCheck: check("product_variants_stock_check", sql`${table.stock} >= 0`)
+  }
 });
 
 // 4. Cart & Orders
@@ -124,6 +136,7 @@ export const orders = pgTable("orders", {
   customerEmail: text("customer_email").notNull(),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),
+  customerNotes: text("customer_notes"),
   
   // Shipping info
   shippingAddressLine1: text("shipping_address_line1").notNull(),
@@ -296,4 +309,131 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   videos: many(productVideos),
   variants: many(productVariants),
   reviews: many(reviews),
+  wishlists: many(wishlists),
+  favorites: many(favorites),
+}));
+
+export const productImagesRelations = relations(productImages, ({ one }) => ({
+  product: one(products, {
+    fields: [productImages.productId],
+    references: [products.id],
+  }),
+}));
+
+export const productTagsRelations = relations(productTags, ({ one }) => ({
+  product: one(products, {
+    fields: [productTags.productId],
+    references: [products.id],
+  }),
+  tag: one(tags, {
+    fields: [productTags.tagId],
+    references: [tags.id],
+  }),
+}));
+
+export const tagsRelations = relations(tags, ({ many }) => ({
+  products: many(productTags),
+}));
+
+export const productVideosRelations = relations(productVideos, ({ one }) => ({
+  product: one(products, {
+    fields: [productVideos.productId],
+    references: [products.id],
+  }),
+}));
+
+export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
+  product: one(products, {
+    fields: [productVariants.productId],
+    references: [products.id],
+  }),
+  cartItems: many(cartItems),
+  orderItems: many(orderItems),
+}));
+
+export const reviewsRelations = relations(reviews, ({ one }) => ({
+  product: one(products, {
+    fields: [reviews.productId],
+    references: [products.id],
+  }),
+  user: one(userProfiles, {
+    fields: [reviews.userId],
+    references: [userProfiles.id],
+  }),
+}));
+
+export const userProfilesRelations = relations(userProfiles, ({ many, one }) => ({
+  roles: many(roles),
+  orders: many(orders),
+  cartItems: many(cartItems),
+  wishlists: many(wishlists),
+  favorites: many(favorites),
+  reviews: many(reviews),
+}));
+
+export const rolesRelations = relations(roles, ({ one }) => ({
+  user: one(userProfiles, {
+    fields: [roles.userId],
+    references: [userProfiles.id],
+  }),
+}));
+
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  user: one(userProfiles, {
+    fields: [orders.userId],
+    references: [userProfiles.id],
+  }),
+  items: many(orderItems),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+  product: one(products, {
+    fields: [orderItems.productId],
+    references: [products.id],
+  }),
+  variant: one(productVariants, {
+    fields: [orderItems.variantId],
+    references: [productVariants.id],
+  }),
+}));
+
+export const cartItemsRelations = relations(cartItems, ({ one }) => ({
+  user: one(userProfiles, {
+    fields: [cartItems.userId],
+    references: [userProfiles.id],
+  }),
+  product: one(products, {
+    fields: [cartItems.productId],
+    references: [products.id],
+  }),
+  variant: one(productVariants, {
+    fields: [cartItems.variantId],
+    references: [productVariants.id],
+  }),
+}));
+
+export const wishlistsRelations = relations(wishlists, ({ one }) => ({
+  user: one(userProfiles, {
+    fields: [wishlists.userId],
+    references: [userProfiles.id],
+  }),
+  product: one(products, {
+    fields: [wishlists.productId],
+    references: [products.id],
+  }),
+}));
+
+export const favoritesRelations = relations(favorites, ({ one }) => ({
+  user: one(userProfiles, {
+    fields: [favorites.userId],
+    references: [userProfiles.id],
+  }),
+  product: one(products, {
+    fields: [favorites.productId],
+    references: [products.id],
+  }),
 }));

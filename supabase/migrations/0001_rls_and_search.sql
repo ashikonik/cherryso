@@ -10,14 +10,18 @@ CREATE INDEX idx_products_search ON "products" USING GIN ("search_vector");
 -- Create helper function for full text search
 CREATE OR REPLACE FUNCTION search_products(search_query text)
 RETURNS SETOF products AS $$
-  SELECT DISTINCT p.* FROM products p
-  LEFT JOIN product_tags pt ON p.id = pt.product_id
-  LEFT JOIN tags t ON pt.tag_id = t.id
-  LEFT JOIN categories c ON p.category_id = c.id
-  WHERE p.search_vector @@ websearch_to_tsquery('english', search_query)
-     OR t.name ILIKE '%' || search_query || '%'
-     OR c.name ILIKE '%' || search_query || '%'
-  ORDER BY ts_rank(p.search_vector, websearch_to_tsquery('english', search_query)) DESC;
+  SELECT p.* FROM (
+    SELECT DISTINCT p.id, ts_rank(p.search_vector, websearch_to_tsquery('english', search_query)) as rank
+    FROM products p
+    LEFT JOIN product_tags pt ON p.id = pt.product_id
+    LEFT JOIN tags t ON pt.tag_id = t.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE p.search_vector @@ websearch_to_tsquery('english', search_query)
+       OR t.name ILIKE '%' || search_query || '%'
+       OR c.name ILIKE '%' || search_query || '%'
+  ) sub
+  JOIN products p ON p.id = sub.id
+  ORDER BY sub.rank DESC;
 $$ LANGUAGE sql STABLE;
 
 -- RLS setup (Enable RLS on all tables)

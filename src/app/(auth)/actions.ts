@@ -1,0 +1,64 @@
+"use server"
+
+import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+
+export async function login(formData: FormData) {
+  const email = formData.get("email") as string
+  const password = formData.get("password") as string
+  const redirectTo = (formData.get("redirectTo") as string) || "/"
+
+  const supabase = await createClient()
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/", "layout")
+  redirect(redirectTo)
+}
+
+export async function signup(formData: FormData) {
+  const email = formData.get("email") as string
+  const password = formData.get("password") as string
+  const fullName = formData.get("fullName") as string
+
+  const supabase = await createClient()
+
+  const { error, data } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+      }
+    }
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  // If email confirmation is disabled, user is logged in automatically.
+  // We can just redirect.
+  revalidatePath("/", "layout")
+  
+  if (data.session) {
+    redirect("/")
+  }
+
+  return { success: "Check your email to confirm your account!" }
+}
+
+export async function signout() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  revalidatePath("/", "layout")
+  redirect("/")
+}
