@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { db } from "@/db"
 import { roles } from "@/db/schema"
 import { eq } from "drizzle-orm"
+import { validateImageUpload, buildStorageKey } from "@/lib/upload-utils"
 
 export async function POST(request: Request) {
   try {
@@ -29,18 +30,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
-    // 3. Generate unique filename
-    const ext = file.name.split('.').pop()
-    const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`
+    // 3. Validate file BEFORE uploading. We never want to trust client-supplied
+    // MIME / extension / size — see lib/upload-utils.ts for the policy.
+    // Magic-byte sniff the first 16 bytes to confirm the bytes match the claim.
+    const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+    const validated = validateImageUpload(
+      { type: file.type, size: file.size, name: file.name },
+      head
+    );
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 })
+    }
 
-    // 4. Upload directly to Supabase Storage
+    // 4. Build a safe storage key. The user-supplied filename never reaches storage.
+    const storageKey = buildStorageKey(validated.ext)
+
+    // 5. Upload to Supabase Storage using the *validated* MIME, never file.type.
     const { data, error } = await supabase
       .storage
       .from('products')
-      .upload(filename, file, {
+      .upload(storageKey, file, {
         cacheControl: '3600',
         upsert: false,
-        contentType: file.type
+        contentType: validated.mime,
       })
 
     if (error) {
@@ -48,11 +60,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // 5. Get Public URL
+    // 6. Get Public URL
     const { data: { publicUrl } } = supabase
       .storage
       .from('products')
-      .getPublicUrl(filename)
+      .getPublicUrl(storageKey)
 
     return NextResponse.json({ url: publicUrl })
 
