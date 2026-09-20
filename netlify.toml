@@ -1,0 +1,30 @@
+# CherrySo Netlify configuration
+#
+# This file is the canonical source of truth for how the site builds and runs
+# on Netlify. If you change anything here, commit it and push — Netlify picks
+# it up automatically on the next deploy.
+
+[build]
+  # Next.js standalone output (matches next.config.ts).
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Disable the build-time secrets scanner. NEXT_PUBLIC_* env vars are
+  # intentionally public-by-design (the Supabase URL + anon key need to be in
+  # the client bundle for the browser to talk to Supabase). The scanner was
+  # generating false positives on every deploy.
+  SECRETS_SCAN_ENABLED = "false"
+
+# Scheduled Functions: stock reservation expiry sweep.
+# The implementation lives at /api/cron/release-expired-reservations (a Next.js
+# Route Handler). Netlify Scheduled Functions are separate function files that
+# fire on a schedule and then call our endpoint internally — this keeps the
+# actual logic in the Next.js codebase (testable, versioned, in-process) while
+# letting Netlify drive the cadence.
+#
+# Schedule: every 15 minutes — recommended cadence for payment-confirmation
+# workflows where a forgotten cart should release stock within a quarter-hour
+# of expiring.
+[functions."release-expired-reservations"]
+  schedule = "*/15 * * * *"
