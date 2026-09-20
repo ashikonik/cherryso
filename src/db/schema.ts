@@ -133,7 +133,7 @@ export const orders = pgTable("orders", {
   status: text("status").$type<"pending" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded">().default("pending").notNull(),
   
   // Snapshot of customer data at time of order
-  customerEmail: text("customer_email").notNull(),
+  customerEmail: text("customer_email"),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),
   customerNotes: text("customer_notes"),

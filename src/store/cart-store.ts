@@ -86,3 +86,22 @@ export const useCartStore = create<CartStore>()(
     }
   )
 )
+
+// Pure selectors. Prefer these over `useCartStore(state => state.getCartTotal())`,
+// which returns a static value because method references don't trigger re-renders
+// when their internal data changes. Pair with shallow-equal or memo for max perf.
+//
+// Usage:
+//   const subtotal = useCartStore(selectCartTotal)
+//   const count = useCartStore(selectCartCount)
+export const selectCartTotal = (s: CartStore) => {
+  const total = s.items.reduce((sum, item) => {
+    const price = Number(item.price) || 0
+    const qty = Number(item.quantity) || 1
+    return sum + price * qty
+  }, 0)
+  return Number(total.toFixed(2)) || 0
+}
+
+export const selectCartCount = (s: CartStore) =>
+  s.items.reduce((count, item) => count + (Number(item.quantity) || 0), 0)
