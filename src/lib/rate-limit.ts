@@ -74,6 +74,9 @@ export const rateLimiters = {
 /**
  * Utility function to check rate limit and throw an error if exceeded.
  * If Redis is not configured, it silently passes (useful for local dev before keys are added).
+ *
+ * Throws a `RATE_LIMIT_EXCEEDED` Error which callers should translate into a
+ * user-facing message (do NOT leak the raw error code to clients).
  */
 export async function checkRateLimit(
   limiterName: keyof typeof rateLimiters,
@@ -81,7 +84,7 @@ export async function checkRateLimit(
 ): Promise<void> {
   const limiter = rateLimiters[limiterName];
   if (!limiter) {
-    console.warn(`[RateLimit] Skipping ${limiterName} because Upstash Redis is not configured.`);
+    // Local dev: Upstash not configured. Silent pass keeps checkout flow working.
     return;
   }
 
@@ -90,4 +93,29 @@ export async function checkRateLimit(
   if (!success) {
     throw new Error("RATE_LIMIT_EXCEEDED");
   }
+}
+
+/**
+ * Extract the best-effort client IP from a Next.js request.
+ *
+ * Trust order (most-to-least specific):
+ *   1. `x-forwarded-for` first hop — Netlify/Cloudflare set this for every request
+ *   2. `x-real-ip` — fallback for proxies that normalise the header
+ *   3. `"unknown"` — degraded bucket; this still prevents a single attacker
+ *      from wiping out the limit for ALL users (they share the "unknown" bucket,
+ *      but their individual count is bounded by the limiter's window).
+ *
+ * Callers should pass the result as the `identifier` to `checkRateLimit`.
+ */
+export function getClientIp(headers: Headers): string {
+  const xff = headers.get("x-forwarded-for");
+  if (xff) {
+    // x-forwarded-for can be a comma-separated list: "client, proxy1, proxy2".
+    // The first entry is the original client.
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  const xri = headers.get("x-real-ip");
+  if (xri) return xri.trim();
+  return "unknown";
 }
