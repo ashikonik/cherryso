@@ -487,21 +487,21 @@
 
 ## 🚨 Top 12 Blockers to MVP Deploy (in order)
 
-> **Status as of 2026-09-20 evening:** Blockers 1, 2, 3, 5, 6, 7, 8, 9, 10, and 12 are **resolved**. Remaining: #4 (storage RLS) and #13 (legal pages). See notes inline.
+> **Status as of 2026-09-21:** All 13 blockers **resolved**. See notes inline.
 
 1. ✅ **Fix checkout stock race condition** (`checkout/actions.ts:35-94`) — replaced findFirst + check + update with a single atomic conditional UPDATE … WHERE stock >= qty; PostgreSQL serialisation prevents overselling
 2. ✅ **Wire rate limiters** — `lib/rate-limit.ts` helpers wired into `createOrderAction` (5/hr), `login` (5/15min), `signup` (3/hr); coupons/reviews are Phase-2 work so their limiters wait
 3. ✅ **Sanitize `/api/upload`** — `lib/upload-utils.ts` adds 5 MB size cap, JPEG/PNG/WebP/GIF allowlist, magic-byte sniff, extension derived from MIME not filename, crypto-random storage keys. 20 tests
-4. ❌ **Tighten storage RLS** to restrict by `auth.uid()` — still pending; see `add-storage-rls.ts` for the starting point
+4. ✅ **Tighten storage RLS** — `supabase/migrations/0005_storage_rls.sql`. `products` bucket: public read, admin/moderator write only. `avatars` bucket: public read, owner-scoped writes via `(storage.foldername(name))[1]::uuid = auth.uid()`. Drops the old loose policies from the obsolete `add-storage-rls.ts` script.
 5. ✅ **Fix COD bug** (`checkout/actions.ts:116`) — dead-code ternary collapsed to `paymentStatus: "pending"`
 6. ✅ **Fix `customerEmail` fallback** — schema now nullable, migration 0004 deployed, action stores NULL for guests (not `"guest@example.com"`)
 7. ✅ **Add Netlify Scheduled Function for reservation expiry** — `/api/cron/release-expired-reservations` route + `netlify/functions/release-expired-reservations.mjs` + `netlify.toml` schedule entry. Protected by `CRON_SECRET` via `lib/cron-auth.ts` (constant-time compare)
-8. ✅ **Add audit logging** — `lib/audit.ts` helper inserts into `audit_log`; wired into all 8 admin actions (createCategory, deleteCategory, createTag, deleteTag, createProduct, updateProduct, deleteProduct, updateProductStatus, quickUpdateStock). Best-effort: audit failures never block the main action
+8. ✅ **Add audit logging** — `lib/audit.ts` helper inserts into `audit_log`; wired into all 9 admin actions (createCategory, deleteCategory, createTag, deleteTag, createProduct, updateProduct, deleteProduct, updateProductStatus, quickUpdateStock). Best-effort: audit failures never block the main action
 9. ✅ **Add Zod validation** to every admin server action — `tagSchema`, `productFormSchema`, `productVariantInputSchema`, `productImageInputSchema`, `productStockUpdateSchema` added to `lib/validators.ts`. Categories/products/tags actions all parse via Zod now
 10. ✅ **Convert cart `getCartTotal`/`getCartCount`** to selectors — `selectCartTotal`/`selectCartCount` exported from `cart-store.ts` (defensive Number() coercion against corrupted localStorage)
 11. ~~🟠 **Add `export const revalidate`** to storefront pages (build currently fails without live DB)~~ — **RESOLVED**: live Netlify build (2026-09-20) succeeded with all 18 pages prerendering. Removed from blockers list.
 12. ✅ **Netlify secrets scanner** — `SECRETS_SCAN_ENABLED = "false"` set in `netlify.toml` `[build.environment]`. NEXT_PUBLIC_* vars are public-by-design
-13. 🟠 **Add Legal pages** (Privacy, Terms, Return/Refund, Contact) — required by plan for MVP, still pending
+13. ✅ **Add Legal pages** — Privacy (`/privacy`), Terms (`/terms`), Refund/Returns (`/returns`), Contact (`/contact`) all live, prerendered as static, footer-linked. **Content is template-quality — must be reviewed by a qualified legal professional before production use.**
 
 ---
 
@@ -526,5 +526,60 @@ The `PLAN.md` was written assuming **Vercel** hosting. Since the target is now *
 - Set `NEXT_PUBLIC_APP_URL` to the Netlify site URL
 - Configure scheduled function for reservation expiry
 - Verify `npm run build` succeeds — it currently fails at SSG due to DB queries at build time (see Blocker #11)
+
+## 🚀 Pre-Deploy Runbook (MVP)
+
+Apply migrations and env vars in this exact order. Skipping a step will cause the deploy to fail or the site to misbehave.
+
+### 1. Database migrations (BEFORE code deploy)
+
+Apply in numeric order. Each is idempotent but apply them sequentially:
+
+```bash
+# From project root, with DATABASE_URL pointing at the LIVE Supabase DB:
+psql "$DATABASE_URL" < supabase/migrations/0004_orders_customer_email_nullable.sql
+psql "$DATABASE_URL" < supabase/migrations/0005_storage_rls.sql
+```
+
+Migration `0004` is **critical** — without it, the new checkout code will throw on guest orders because `customer_email` is still `NOT NULL`. Migration `0005` tightens storage RLS so non-admin users can no longer upload to the products bucket.
+
+### 2. Netlify env vars (before enabling the scheduled function)
+
+Set in the Netlify dashboard (Site settings → Environment variables):
+
+| Key | Required | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Anon key (safe for browser) |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Server-only; bypasses RLS for admin ops |
+| `DATABASE_URL` | ✅ | Postgres connection string |
+| `CRON_SECRET` | ✅ | `openssl rand -hex 32`. Used by the reservation-expiry cron endpoint. The endpoint returns 500 if this is unset. |
+| `UPSTASH_REDIS_REST_URL` | 🟡 | If unset, rate limiters pass-through silently. Set for production. |
+| `UPSTASH_REDIS_REST_TOKEN` | 🟡 | Pair with the URL above. |
+| `STEADFAST_API_KEY` | 🟡 | For courier integration |
+| `STEADFAST_SECRET_KEY` | 🟡 | |
+| `STEADFAST_BASE_URL` | 🟡 | `https://portal.steadfast.com.bd/api/v1` |
+| `STEADFAST_WEBHOOK_SECRET` | 🟡 | HMAC secret for inbound webhooks |
+| `RESEND_API_KEY` | 🟡 | For transactional email |
+| `ADMIN_NOTIFICATION_EMAILS` | 🟡 | Comma-separated |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | 🟡 | GA4 property ID |
+| `NEXT_PUBLIC_APP_URL` | 🟡 | Site URL |
+
+### 3. Storage buckets
+
+In Supabase dashboard → Storage, create the buckets **before** deploying code:
+
+- `products` — Public bucket (read-only for the public). The `0005` migration restricts writes to admins.
+- `avatars` — Public bucket (read-only for the public). The `0005` migration allows users to upload only into their own folder.
+
+### 4. Trigger deploy
+
+Push to `main`. Netlify will:
+
+1. Install deps
+2. Run `npm run build`
+3. Deploy the cron function on the `*/15 * * * *` schedule
+
+Verify the cron is firing by checking Netlify → Functions → Scheduled → `release-expired-reservations`. You should see invocations every 15 minutes after deploy.
 
 This checklist reflects `PROJECT_STATUS.md`'s claim of "completed through Phase 8" but the PLAN.md sanity-check items reveal substantial gaps — most notably the absence of audit logging, the unchecked stock race condition, the unwired rate limiters, the missing webhook endpoint, and the entirely absent return-management and email-notification systems that Phase 7 explicitly requires.
