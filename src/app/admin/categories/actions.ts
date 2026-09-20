@@ -7,21 +7,36 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/db"
 import { categories } from "@/db/schema"
 import { eq } from "drizzle-orm"
+import { categorySchema } from "@/lib/validators"
+import { logAdminAction } from "@/lib/audit"
 
 export async function createCategory(formData: FormData) {
-  await requireAdmin()
-  const name = formData.get("name") as string
-  const slug = formData.get("slug") as string
-  const parentId = formData.get("parentId") as string || null
-
-  if (!name || !slug) return { error: "Name and slug are required" }
+  const user = await requireAdmin()
+  const parsed = categorySchema.safeParse({
+    name: formData.get("name"),
+    slug: formData.get("slug"),
+    description: formData.get("description") ?? undefined,
+    parentId: formData.get("parentId") || null,
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid category data" }
+  }
 
   try {
-    await db.insert(categories).values({
-      name,
-      slug,
-      parentId,
-    })
+    const [created] = await db.insert(categories).values({
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+      parentId: parsed.data.parentId ?? null,
+    }).returning({ id: categories.id })
+    if (created) {
+      await logAdminAction({
+        userId: user.id,
+        action: "create",
+        entityType: "category",
+        entityId: created.id,
+        details: { name: parsed.data.name, slug: parsed.data.slug },
+      })
+    }
     revalidatePath("/admin/categories")
     return { success: true }
   } catch (error: unknown) {
@@ -30,9 +45,15 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function deleteCategory(id: string) {
-  await requireAdmin()
+  const user = await requireAdmin()
   try {
     await db.delete(categories).where(eq(categories.id, id))
+    await logAdminAction({
+      userId: user.id,
+      action: "delete",
+      entityType: "category",
+      entityId: id,
+    })
     revalidatePath("/admin/categories")
     return { success: true }
   } catch (error: unknown) {

@@ -47,7 +47,10 @@ export const reviewSchema = z.object({
 export const cartItemSchema = z.object({
   productId: z.string().uuid(),
   variantId: z.string().uuid().optional().nullable(),
-  quantity: z.number().int().positive().default(1),
+  // Upper bound guards against accidental/hostile absurd quantities at the validation
+  // layer (DB CHECK on stock is the second line of defense). 999 is well above any
+  // realistic single-cart line item.
+  quantity: z.number().int().positive().max(999).default(1),
 });
 
 // Order Creation
@@ -60,4 +63,66 @@ export const orderSchema = z.object({
   shippingCity: z.string().min(2),
   shippingPostalCode: z.string().min(4),
   paymentMethod: z.string(), // e.g., 'cash_on_delivery', 'bkash'
+});
+
+// Tags (admin)
+export const tagSchema = z.object({
+  name: z.string().min(2),
+  slug: z.string().min(2).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with dashes"),
+});
+
+// Product variants (admin)
+// `id` is optional: only present when editing an existing variant.
+// `name` and `color` are individually optional but at least one must be present
+// (the schema enforces "name XOR color" at the form level, not here — keep the
+// variant schema permissive and let the action code default `name = color`).
+export const productVariantInputSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    name: z.string().min(1).optional(),
+    color: z.string().min(1).optional(),
+    sku: z.string().min(2),
+    stock: z.coerce.number().int().nonnegative(),
+  })
+  .refine((v) => Boolean(v.name) || Boolean(v.color), {
+    message: "Variant must have either a name or a color",
+  });
+
+// Product images (admin)
+export const productImageInputSchema = z.object({
+  url: z.string().url(),
+  color: z.string().nullable().optional(),
+});
+
+// Product form (admin create + update)
+// FormData submits everything as strings, so we coerce numerics.
+export const productFormSchema = z.object({
+  name: z.string().min(2),
+  slug: z.string().min(2).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with dashes"),
+  description: z.string().optional().nullable(),
+  basePrice: z.coerce.number().positive(),
+  compareAtPrice: z.coerce.number().positive().optional().nullable(),
+  weightGrams: z.coerce.number().int().nonnegative().default(0),
+  status: z.enum(["draft", "active", "archived"]).default("draft"),
+  categoryId: z.string().uuid().optional().nullable(),
+  // Standard SKU/stock are used when there are no variants.
+  sku: z.string().optional(),
+  stock: z.coerce.number().int().nonnegative().default(0),
+  // variantsData / imagesData are JSON-stringified arrays validated separately.
+  variants: z.array(productVariantInputSchema).default([]),
+  images: z.array(productImageInputSchema).default([]),
+});
+
+// Product stock quick-edit (admin)
+export const productStockUpdateSchema = z.object({
+  productId: z.string().uuid(),
+  newStock: z.coerce.number().int().nonnegative(),
+  variantsStock: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        stock: z.coerce.number().int().nonnegative(),
+      })
+    )
+    .default([]),
 });

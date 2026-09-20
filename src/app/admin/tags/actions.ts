@@ -7,19 +7,33 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/db"
 import { tags } from "@/db/schema"
 import { eq } from "drizzle-orm"
+import { tagSchema } from "@/lib/validators"
+import { logAdminAction } from "@/lib/audit"
 
 export async function createTag(formData: FormData) {
-  await requireAdmin()
-  const name = formData.get("name") as string
-  const slug = formData.get("slug") as string
-
-  if (!name || !slug) return { error: "Name and slug are required" }
+  const user = await requireAdmin()
+  const parsed = tagSchema.safeParse({
+    name: formData.get("name"),
+    slug: formData.get("slug"),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid tag data" }
+  }
 
   try {
-    await db.insert(tags).values({
-      name,
-      slug,
-    })
+    const [created] = await db.insert(tags).values({
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+    }).returning({ id: tags.id })
+    if (created) {
+      await logAdminAction({
+        userId: user.id,
+        action: "create",
+        entityType: "tag",
+        entityId: created.id,
+        details: { name: parsed.data.name, slug: parsed.data.slug },
+      })
+    }
     revalidatePath("/admin/tags")
     return { success: true }
   } catch (error: unknown) {
@@ -28,9 +42,15 @@ export async function createTag(formData: FormData) {
 }
 
 export async function deleteTag(id: string) {
-  await requireAdmin()
+  const user = await requireAdmin()
   try {
     await db.delete(tags).where(eq(tags.id, id))
+    await logAdminAction({
+      userId: user.id,
+      action: "delete",
+      entityType: "tag",
+      entityId: id,
+    })
     revalidatePath("/admin/tags")
     return { success: true }
   } catch (error: unknown) {
